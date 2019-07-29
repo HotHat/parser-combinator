@@ -2,6 +2,8 @@
 
 namespace Wow;
 
+use ReflectionFunction;
+use Closure;
 
 class Carrying
 {
@@ -9,10 +11,10 @@ class Carrying
     private $args;
     private $params = [];
 
-    public function __construct(\Closure $fun)
+    public function __construct(Closure $fun)
     {
         $this->fun = $fun;
-        $rf = new \ReflectionFunction($fun);
+        $rf = new ReflectionFunction($fun);
         $this->args = $rf->getParameters();
     }
 
@@ -26,8 +28,4 @@ class Carrying
 
         return $this;
     }
-}
-
-function carrying($fun) {
-    return new Carrying($fun);
 }

@@ -16,7 +16,3 @@ class Failure implements Result
         return sprintf('"%s"', $this->reason);
     }
 }
-
-function failure($reason) {
-    return new Failure($reason);
-}

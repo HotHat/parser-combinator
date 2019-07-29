@@ -5,29 +5,27 @@ namespace Wow;
 class Success implements Result
 {
     private $result;
-    private $next;
+    private $remain;
 
-    public function __construct($result, $next)
+    public function __construct($result, $remain)
     {
 
         $this->result = $result;
-        $this->next   = $next;
-    }
-
-    public function getAst() {
-        return $this->result;
-    }
-
-    public function getNext() {
-        return $this->next;
+        $this->remain   = $remain;
     }
 
     public function __toString()
     {
-        return sprintf('Success(%s, "%s")', json_encode($this->result), $this->next);
+        return sprintf('Success(%s, "%s")', json_encode($this->result), $this->remain);
     }
-}
 
-function success($result, $next) {
-    return new Success($result, $next);
+    public function __get($name) {
+        if ($name == 'RESULT')  {
+            return $this->result;
+        }
+
+        if ($name == 'REMAIN')  {
+            return $this->remain;
+        }
+    }
 }
