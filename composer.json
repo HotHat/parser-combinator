@@ -1,0 +1,39 @@
+{
+    "name": "lyh/parser-combinator",
+    "description": "A PHP version of parser combinator",
+    "license": "MIT",
+    "keywords": [
+        "parser",
+        "parser combinator",
+        "syntax"
+    ],
+    "authors": [
+        {
+            "name": "HotHat",
+            "email": "luyuhux@gmail.com",
+            "homepage": "https://github.com/HotHat"
+        }
+    ],
+    "require": {
+        "php": "7.*"
+    },
+    "autoload": {
+        "files": [
+            "src/parsers.php"
+        ],
+        "psr-4": {
+            "Wow\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Wow\\": "tests/"
+        },
+        "files": [
+            "src/parsers.php"
+        ]
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~6.5"
+    }
+}
