@@ -2,18 +2,19 @@
 namespace Wow;
 
 use Closure;
+use IntlChar;
 
 // class helper functions
 function carrying($fun) {
     return new Carrying($fun);
 }
 
-function failure($reason) {
-    return new Failure($reason);
+function failure($label, $reason) {
+    return new Failure($label, $reason);
 }
 
-function parser($fn) {
-    return new Parser($fn);
+function parser($fn, $label = '') {
+    return new Parser($fn, $label);
 }
 
 function success($result, $remain) {
@@ -24,65 +25,58 @@ function success($result, $remain) {
 
 // parser combinator
 function satisfy(Closure $compare, string $label) : Parser {
-    $result =  function($str) use ($compare, $label) {
-        if (empty($str)) {
-            return failure('Empty string');
+    $result =  function($input) use ($compare, $label) {
+        if (empty($input)) {
+            return failure($label,'No more input');
         }
-        $char = mb_substr($str, 0, 1);
+        $char = mb_substr($input, 0, 1);
         if ($compare($char)) {
-            return success($char, mb_substr($str, 1));
+            return success($char, mb_substr($input, 1));
         } else  {
-            return failure(sprintf('Failure Expecting: %s. Got: %s', $label, $char));
+            return failure($label, sprintf('Failure Expecting: %s. Got: %s', $label, $char));
         }
     };
-    return parser($result);
+    return parser($result, $label);
 }
 
 function pchar($char) : Parser {
+    $label = sprintf("%s", $char);
     return satisfy(function($a) use ($char) {
         return $a == $char;
-    }, $char);
+    }, $label);
 }
 
-function run(Parser $parser, string $str) : Result {
-    $fun = $parser->FUN;
-    return $fun($str);
+function run(Parser $parser, string $input) : Result {
+    $fun = $parser->parseFn;
+    return $fun($input);
 }
 
 function andThen(Parser $pa, Parser $pb) : Parser {
-    $fun = function ($str) use ($pa, $pb) {
-        $f1 = $pa->FUN;
-        $res1 = $f1($str);
-        if ($res1 instanceof Failure) {
-            return $res1;
-        }
+    $label = sprintf("%s andThen %s", $pa->label, $pb->label);
+    $fn = carrying(function($p1Result) use ($pb) {
+        $f =  carrying(function ($p2Result) use ($p1Result) {
+            return returnP([$p1Result, $p2Result]);
+        });
+        return bindP($f, $pb);
+    });
 
-        $f2 = $pb->FUN;
-        $res2 =  $f2($res1->REMAIN);
-
-        if ($res2 instanceof Failure) {
-            return $res2;
-        }
-
-        return success([$res1->RESULT, $res2->RESULT], $res2->REMAIN);
-    };
-
-    return parser($fun);
+    return setLabel(bindP($fn, $pa), $label);
 }
 
 function orThen($pa, $pb) : Parser {
+    $label = sprintf("%s orThen %s", $pa->label, $pb->label);
     $fun = function ($str) use ($pa, $pb) {
-        $f1 = $pa->FUN;
+        $f1 = $pa->parseFn;
         $res1 = $f1($str);
         if ($res1 instanceof Success) {
             return $res1;
         }
 
-        $f2 = $pb->FUN;
+        $f2 = $pb->parseFn;
         return $f2($str);
     };
 
-    return parser($fun);
+    return setLabel(parser($fun), $label);
 }
 
 function choice(Parser ...$parsers) : Parser {
@@ -97,10 +91,11 @@ function choice(Parser ...$parsers) : Parser {
 
 
 function anyOf($arr) : Parser {
-
+    
+    $label = sprintf("Any of %s", json_encode($arr));
     $arr =  array_map(function($i) {return pchar($i);}, $arr);
 
-    return choice(...$arr);
+    return setLabel(choice(...$arr), $label);
 }
 
 function returnP($x) : Parser {
@@ -116,13 +111,13 @@ function mapP(Carrying $fn, Parser $parser) : Parser {
         $result = run($parser, $input);
         
         if ($result instanceof Success) {
-            // if (is_array($result->RESULT)) {
-            //     $r = $fn->invoke(...$result->RESULT);
+            // if (is_array($result->result)) {
+            //     $r = $fn->invoke(...$result->result);
             // } else {
-            $r = $fn->invoke($result->RESULT);
+            $r = $fn->invoke($result->result);
             // }
            
-            return success($r, $result->REMAIN);
+            return success($r, $result->remain);
         } else  {
             return $result;
         }
@@ -175,17 +170,17 @@ function parseZeroOrMore(Parser $parser, $input) : array {
         return [[], $input];
     }
 
-    $result = [$firstResult->RESULT];
+    $result = [$firstResult->result];
 
     $parseZeroOrMore = $firstResult;
-    $remain = $firstResult->REMAIN;
+    $remain = $firstResult->remain;
 
     while ($parseZeroOrMore instanceof Success) {
         $parseZeroOrMore = run($parser, $remain);
 
         if ($parseZeroOrMore instanceof Success) {
-            $result[] = $parseZeroOrMore->RESULT;
-            $remain = $parseZeroOrMore->REMAIN;
+            $result[] = $parseZeroOrMore->result;
+            $remain = $parseZeroOrMore->remain;
         }
     }
 
@@ -209,9 +204,9 @@ function many1(Parser $parser) : Parser {
             return $firstResult;
         }
 
-        $more = parseZeroOrMore($parser, $firstResult->REMAIN);
+        $more = parseZeroOrMore($parser, $firstResult->remain);
 
-        $result = [$firstResult->RESULT];
+        $result = [$firstResult->result];
         $result = array_merge($result, $more[0]);
 
         return success($result, $more[1]);
@@ -264,18 +259,18 @@ function sepBy(Parser $p, Parser $sep) {
 
 function bindP(Carrying $fn, Parser $parser) {
     $fun = function ($input) use ($fn, $parser) {
-        $f1 = $parser->FUN;
+        $f1 = $parser->parseFn;
         $res1 = $f1($input);
         if ($res1 instanceof Failure) {
             return $res1;
         }
 
-        $p2 = $fn->invoke($res1->RESULT);
+        $p2 = $fn->invoke($res1->result);
 
-        return run($p2, $res1->REMAIN);
+        return run($p2, $res1->remain);
     };
 
-    return parser($fun);
+    return parser($fun, 'unknown');
 }
 
 // bindP version
@@ -293,4 +288,31 @@ function applyP2(Parser $fp, Parser $xp) {
     });
 
     return bindP($fn, $fp);
+}
+
+// update the label in the parser
+function setLabel($parser, $newLabel) {
+    $fn = function ($input) use ($parser, $newLabel) {
+        $result =  ($parser->parseFn)($input);
+        
+        if ($result instanceof Success) {
+            return $result;
+        } else {
+            return failure($newLabel, $result->reason);
+        }
+        
+    };
+    return parser($fn, $newLabel);
+}
+
+// parse a digit
+
+function digitChar() {
+    $label = 'digit';
+    return satisfy(function ($x) {return IntlChar::isdigit($x);}, $label);
+}
+
+function whitespaceChar() {
+    $label = 'whitespace';
+    return satisfy(function ($x) {return IntlChar::isWhitespace($x);}, $label);
 }

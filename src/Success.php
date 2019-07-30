@@ -25,12 +25,14 @@ class Success extends Result
     }
 
     public function __get($name) {
-        if ($name == 'RESULT')  {
+        if ($name == 'result')  {
             return $this->result;
         }
 
-        if ($name == 'REMAIN')  {
+        if ($name == 'remain')  {
             return $this->remain;
         }
+        
+        assert(false, 'Have not this attribute: ' . $name);
     }
 }

@@ -39,7 +39,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $pab = andThen($pa, $pb);
 
         $r1 = run($pab, 'abc');
-        echo $r1;
+        echo $r1, PHP_EOL;
         $this->assertEquals(true, $r1 instanceof Success);
         $r2 = run($pab, 'adc');
         echo $r2;
@@ -52,12 +52,15 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $pb = pchar('b');
         $paOrb = orThen($pa, $pb);
         $r1 = run($paOrb, 'abc');
+        echo $r1, PHP_EOL;
         $this->assertEquals(true, $r1 instanceof Success);
 
         $r2 = run($paOrb, 'bdc');
+        echo $r2, PHP_EOL;
         $this->assertEquals(true, $r2 instanceof Success);
 
         $r3 = run($paOrb, 'cdc');
+        echo $r3, PHP_EOL;
         $this->assertEquals(true, $r3 instanceof Failure);
     }
 
@@ -486,31 +489,33 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals(1, 1);
     }
 
-    public function testBindP() {
+    public function testBindP()
+    {
         $fn = carrying(function ($param) {
             [[$a, $b], $c] = $param;
             return $a . $b . $c;
         });
-
+    
         $pa = pchar('a');
         $pb = pchar('b');
         $pc = pchar('c');
         $p = andThen(andThen($pa, $pb), $pc);
-
+    
         //$r1 = run($parseThreeDigits, '123A');
         $mapP = function ($f, $p) {
-            $fn = carrying(function($x) use ($f) {return returnP($f->invoke($x));});
+            $fn = carrying(function ($x) use ($f) {
+                return returnP($f->invoke($x));
+            });
             return bindP($fn, $p);
         };
-
+    
         // $p = mapP($fn, $p);
         $mp = $mapP($fn, $p);
         //$p = mapP(function($x) {return intval($x);}, $p);
         $r1 = run($mp, 'abc');
         echo $r1, PHP_EOL;
-
-
+    
+    
         // $map = bindP()
     }
-
 }

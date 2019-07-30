@@ -16,7 +16,9 @@
     ],
     "require": {
         "php": "^7.1",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "ext-json": "*",
+        "ext-intl": "*"
     },
     "autoload": {
         "files": [

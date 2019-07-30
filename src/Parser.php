@@ -5,11 +5,12 @@ namespace Wow;
 
 
 class Parser {
-    public $fun;
+    public $parseFn;
     public $label;
 
-    public function __construct($fn) {
-        $this->fun = $fn;
+    public function __construct($fn, $label) {
+        $this->parseFn = $fn;
+        $this->label = $label;
     }
 
     public function label($label) {
@@ -17,12 +18,12 @@ class Parser {
     }
 
     public function __get($name) {
-        if ($name == 'FUN')  {
-            return $this->fun;
+        if ($name == 'parseFn')  {
+            return $this->parseFn;
         }
 
-        if ($name == 'LABEL')  {
-            return $this->label;
+        if ($name == 'label')  {
+            return $this->label ?? '';
         }
     }
 }
