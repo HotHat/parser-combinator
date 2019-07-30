@@ -269,8 +269,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $t4 = '1234';
         $t5 = 'ABC';
 
-        $digit = anyof(array_map(function ($i) { return (string)$i; },
-            range(0, 9)));
+        $digit = anyof(array_map(function ($i) { return (string)$i; }, range(0, 9)));
 
         $digits = many1($digit);
 
@@ -316,8 +315,16 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
         $r = run($optA, 'ab');
 
-        echo $r;
+        echo $r, PHP_EOL;
         $this->assertEquals('a', $r->RESULT);
+
+        $digit = anyof(array_map(function ($i) { return (string)$i; }, range(0, 9)));
+
+        $digitThenSemicolon = keepLeft($digit, optional(pchar(';')));
+
+        $r = run($digitThenSemicolon, '5;');
+        echo $r;
+        $this->assertEquals('5', $r->RESULT);
     }
 
     public function testKeepRight() {
@@ -330,6 +337,90 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
         echo $r;
         $this->assertEquals('b', $r->RESULT);
+
+    }
+
+    public function pint () {
+
+        $digit = anyof(array_map(function ($i) { return (string)$i; }, range(0, 9)));
+
+        $fn = carrying(function($x) {return intval(implode('', $x));});
+
+        $digits = many1($digit);
+
+        return mapP($fn, $digits);
+    }
+
+    public function testPint() {
+        $pint = $this->pint();
+
+        $r1 = run($pint, '1ABC');
+        echo $r1, PHP_EOL;
+        $this->assertEquals(true, $r1 instanceof Failure);
+
+        $r2 = run($pint, '11BC');
+        echo $r2, PHP_EOL;
+        $this->assertEquals(true, $r2 instanceof Failure);
+
+        $r3 = run($pint, '123C');
+        echo $r3, PHP_EOL;
+        $this->assertEquals(true, $r3 instanceof Failure);
+
+        $r4 = run($pint, '1234');
+        echo $r4, PHP_EOL;
+        $this->assertEquals(true, $r4 instanceof Failure);
+
+
+        $r5 = run($pint, 'ABCD');
+        echo $r5, PHP_EOL;
+        $this->assertEquals(true, $r5 instanceof Failure);
+    }
+
+    public function testBetween() {
+        $pdoublequote = pchar('"');
+        $pint = $this->pint();
+
+        $quoteInteger = between($pdoublequote, $pint, $pdoublequote);
+
+        $r = run ($quoteInteger, '"1234"');
+        echo $r, PHP_EOL;
+        $this->assertEquals('1234', $r->RESULT);
+
+        $r = run ($quoteInteger, '1234');
+        echo $r;
+        $this->assertEquals(true, $r instanceof Failure);
+
+    }
+
+    public function testSepBy1() {
+        $comma = pchar(',');
+        $digit = anyof(array_map(function ($i) { return (string)$i; }, range(0, 9)));
+
+        $oneOrMoreDigitList = sepBy1($digit, $comma);
+
+        $r = run($oneOrMoreDigitList, '1;');
+        echo $r;
+
+        $r2 = run($oneOrMoreDigitList, '1,2,3,4;');
+        echo $r2;
+    }
+
+    public function testSepBy() {
+        $comma = pchar(',');
+        $digit = anyof(array_map(function ($i) { return (string)$i; }, range(0, 9)));
+
+        $zeroOrMoreDigitList = sepBy($digit, $comma);
+
+
+        $r = run($zeroOrMoreDigitList, '1;');
+        echo $r;
+
+        $r2 = run($zeroOrMoreDigitList, '1,2,3,4;');
+        echo $r2;
+
+        $r3 = run($zeroOrMoreDigitList, 'Z1,2,3,4;');
+        echo $r3;
+
     }
 
 }
