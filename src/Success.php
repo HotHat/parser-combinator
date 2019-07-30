@@ -2,7 +2,7 @@
 namespace Wow;
 
 
-class Success implements Result
+class Success extends Result
 {
     private $result;
     private $remain;
@@ -16,7 +16,12 @@ class Success implements Result
 
     public function __toString()
     {
-        return sprintf('Success(%s, "%s")', json_encode($this->result), $this->remain);
+        if (is_array($this->result)) {
+            $val = json_encode($this->result);
+        } else {
+            $val = strval($this->result);
+        }
+        return sprintf('Success(%s, "%s")', $val, $this->remain);
     }
 
     public function __get($name) {

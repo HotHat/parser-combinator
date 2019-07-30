@@ -4,4 +4,4 @@
 namespace Wow;
 
 
-interface Result {}
+class Result {}

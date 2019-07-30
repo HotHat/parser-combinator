@@ -4,7 +4,7 @@
 namespace Wow;
 
 
-class Failure implements Result
+class Failure extends Result
 {
     private $reason;
 

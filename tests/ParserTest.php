@@ -296,4 +296,40 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
     }
 
+    public function testOptional() {
+        $pa = pchar('a');
+
+        $optA = optional($pa);
+
+        $r = run($optA, 'aA');
+
+        echo $r;
+        $this->assertEquals(true, $r instanceof Success);
+        $this->assertEquals(true, $r->RESULT instanceof Some);
+    }
+
+    public function testKeepLeft() {
+        $pa = pchar('a');
+        $pb = pchar('b');
+
+        $optA = keepLeft($pa, $pb);
+
+        $r = run($optA, 'ab');
+
+        echo $r;
+        $this->assertEquals('a', $r->RESULT);
+    }
+
+    public function testKeepRight() {
+        $pa = pchar('a');
+        $pb = pchar('b');
+
+        $optA = keepRight($pa, $pb);
+
+        $r = run($optA, 'ab');
+
+        echo $r;
+        $this->assertEquals('b', $r->RESULT);
+    }
+
 }

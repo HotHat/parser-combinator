@@ -219,7 +219,25 @@ function many1(Parser $parser) : Parser {
     };
 
     return parser($fn);
+}
 
+function optional(Parser $parser) {
+    $some = mapP(carrying(function($x) {return new Some($x);}), $parser);
+    $none = returnP(new None());
+
+    return orThen($some, $none);
+}
+
+function keepLeft(Parser $left, Parser $right) {
+    $p = andThen($left, $right);
+
+    return mapP(carrying(function($param) {return $param[0];}), $p);
+}
+
+function keepRight(Parser $left, Parser $right) {
+    $p = andThen($left, $right);
+
+    return mapP(carrying(function($param) {return $param[1];}), $p);
 }
 
 
