@@ -32,7 +32,7 @@ function satisfy(Closure $compare, string $label) : Parser {
         if ($compare($char)) {
             return success($char, mb_substr($str, 1));
         } else  {
-            return failure(sprintf('Expect: %s, get: %s', $label, $char));
+            return failure(sprintf('Failure Expecting: %s. Got: %s', $label, $char));
         }
     };
     return parser($result);
@@ -259,4 +259,38 @@ function sepBy1(Parser $p, Parser $sep) {
 
 function sepBy(Parser $p, Parser $sep) {
     return orThen(sepBy1($p, $sep), returnP([]));
+}
+
+
+function bindP(Carrying $fn, Parser $parser) {
+    $fun = function ($input) use ($fn, $parser) {
+        $f1 = $parser->FUN;
+        $res1 = $f1($input);
+        if ($res1 instanceof Failure) {
+            return $res1;
+        }
+
+        $p2 = $fn->invoke($res1->RESULT);
+
+        return run($p2, $res1->REMAIN);
+    };
+
+    return parser($fun);
+}
+
+// bindP version
+function mapP2(Carrying $fn, Parser $parser) {
+    $f = carrying(function($x) use ($fn) {return returnP($fn->invoke($x));});
+    return bindP($f, $parser);
+}
+
+// bindP version
+function applyP2(Parser $fp, Parser $xp) {
+    $fn = carrying(function ($f) use ($xp) {
+       // // $f2 = carrying(function ($x) use ($f) { return returnP($f->invoke($x));});
+       // return bindP($f2, $xp);
+        return mapP2($f, $xp);
+    });
+
+    return bindP($fn, $fp);
 }

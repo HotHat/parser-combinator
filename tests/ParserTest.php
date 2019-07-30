@@ -136,6 +136,39 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         //echo run($p, '12b'), PHP_EOL;
     }
 
+    public function testMapP2()
+    {
+        $fn = carrying(function ($param) {
+            [[$a, $b], $c] = $param;
+            return $a . $b . $c;
+        });
+        $parseDigit = anyof(array_map(function ($i) {
+            return (string)$i;
+        }, range(0, 9)));
+        $parseThreeDigits = andThen(andThen($parseDigit, $parseDigit), $parseDigit);
+
+        //$r1 = run($parseThreeDigits, '123A');
+        $p = mapP2($fn, $parseThreeDigits);
+        //$p = mapP(function($x) {return intval($x);}, $p);
+        $r1 = run($p, '123A');
+        echo $r1, PHP_EOL;
+        //$r1 = run($p, '123A');
+        //echo $r1;
+        $this->assertEquals(true, $r1 instanceof Success);
+        $this->assertEquals('123', $r1->RESULT);
+
+        $p2 = mapP2(carrying(function ($x) {
+            return intval($x);
+        }), $p);
+        $r2 = run($p2, '123A');
+        echo $r2, PHP_EOL;
+        $this->assertEquals(true, $r2 instanceof Success);
+        $this->assertEquals(123, $r2->RESULT);
+
+        //$this->assertEquals(123, $r1->RESULT);
+        //echo run($p, '12b'), PHP_EOL;
+    }
+
     public function testReturnP()
     {
 
@@ -154,6 +187,25 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $x = applyP($fp, $p1);
         $y = applyP($x, $p2);
         $z = applyP($y, $p3);
+
+        $r = run($z, '153A');
+        echo $r;
+        $this->assertEquals(true, $r instanceof Success);
+        $this->assertEquals(9, $r->RESULT);
+    }
+
+    public function testApplyP2()
+    {
+        $fp = returnP(carrying(function ($x, $y, $z) {
+            return $x + $y + $z;
+        }));
+
+        $p1 = pchar('1');
+        $p2 = pchar('5');
+        $p3 = pchar('3');
+        $x = applyP2($fp, $p1);
+        $y = applyP2($x, $p2);
+        $z = applyP2($y, $p3);
 
         $r = run($z, '153A');
         echo $r;
@@ -398,11 +450,21 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
         $oneOrMoreDigitList = sepBy1($digit, $comma);
 
-        $r = run($oneOrMoreDigitList, '1;');
-        echo $r;
+        $r1 = run($oneOrMoreDigitList, '1;');
+        echo $r1, PHP_EOL;
+        $this->assertEquals(true, $r1 instanceof Success);
 
-        $r2 = run($oneOrMoreDigitList, '1,2,3,4;');
-        echo $r2;
+        $r2 = run($oneOrMoreDigitList, '1,2;');
+        echo $r2, PHP_EOL;
+        $this->assertEquals(true, $r2 instanceof Success);
+
+        $r3 = run($oneOrMoreDigitList, '1,2,3;');
+        echo $r3, PHP_EOL;
+        $this->assertEquals(true, $r3 instanceof Success);
+
+        $r4 = run($oneOrMoreDigitList, 'Z;');
+        echo $r4, PHP_EOL;
+        $this->assertEquals(true, $r4 instanceof Failure);
     }
 
     public function testSepBy() {
@@ -421,6 +483,34 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $r3 = run($zeroOrMoreDigitList, 'Z1,2,3,4;');
         echo $r3;
 
+        $this->assertEquals(1, 1);
+    }
+
+    public function testBindP() {
+        $fn = carrying(function ($param) {
+            [[$a, $b], $c] = $param;
+            return $a . $b . $c;
+        });
+
+        $pa = pchar('a');
+        $pb = pchar('b');
+        $pc = pchar('c');
+        $p = andThen(andThen($pa, $pb), $pc);
+
+        //$r1 = run($parseThreeDigits, '123A');
+        $mapP = function ($f, $p) {
+            $fn = carrying(function($x) use ($f) {return returnP($f->invoke($x));});
+            return bindP($fn, $p);
+        };
+
+        // $p = mapP($fn, $p);
+        $mp = $mapP($fn, $p);
+        //$p = mapP(function($x) {return intval($x);}, $p);
+        $r1 = run($mp, 'abc');
+        echo $r1, PHP_EOL;
+
+
+        // $map = bindP()
     }
 
 }
