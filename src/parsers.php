@@ -23,8 +23,7 @@ function success($result, $remain) {
 
 
 // parser combinator
-
-function satisfy(Closure $compare, string $label) {
+function satisfy(Closure $compare, string $label) : Parser {
     $result =  function($str) use ($compare, $label) {
         if (empty($str)) {
             return failure('Empty string');
@@ -36,21 +35,21 @@ function satisfy(Closure $compare, string $label) {
             return failure(sprintf('Expect: %s, get: %s', $label, $char));
         }
     };
-    return new Parser($result);
+    return parser($result);
 }
 
-function pchar($char) {
+function pchar($char) : Parser {
     return satisfy(function($a) use ($char) {
         return $a == $char;
     }, $char);
 }
 
-function run(Parser $parser, string $str) {
+function run(Parser $parser, string $str) : Result {
     $fun = $parser->FUN;
     return $fun($str);
 }
 
-function andThen(Parser $pa, Parser $pb) {
+function andThen(Parser $pa, Parser $pb) : Parser {
     $fun = function ($str) use ($pa, $pb) {
         $f1 = $pa->FUN;
         $res1 = $f1($str);
@@ -68,25 +67,25 @@ function andThen(Parser $pa, Parser $pb) {
         return success([$res1->RESULT, $res2->RESULT], $res2->REMAIN);
     };
 
-    return new Parser($fun);
+    return parser($fun);
 }
 
-function orThen($pA, $pB) {
-    $fun = function ($str) use ($pA, $pB) {
-        $f1 = $pA->FUN;
+function orThen($pa, $pb) : Parser {
+    $fun = function ($str) use ($pa, $pb) {
+        $f1 = $pa->FUN;
         $res1 = $f1($str);
         if ($res1 instanceof Success) {
             return $res1;
         }
 
-        $f2 = $pB->FUN;
+        $f2 = $pb->FUN;
         return $f2($str);
     };
 
-    return new Parser($fun);
+    return parser($fun);
 }
 
-function choice(Parser ...$parsers) {
+function choice(Parser ...$parsers) : Parser {
     assert(count($parsers) >= 1);
     $first = $parsers[0];
     $other = array_slice($parsers, 1);
@@ -97,36 +96,31 @@ function choice(Parser ...$parsers) {
 }
 
 
-function anyOf($arr) {
+function anyOf($arr) : Parser {
 
     $arr =  array_map(function($i) {return pchar($i);}, $arr);
 
     return choice(...$arr);
 }
 
-function pstring($str) {
-    $arr =  array_map(function($i) {return pchar($i);}, preg_split('//u', $str, null, PREG_SPLIT_NO_EMPTY));
-
-    return sequence(...$arr);
-}
-function returnP($x) {
+function returnP($x) : Parser {
     $call =  function ($input) use($x) {
         return success($x, $input);
     };
     
-    return new Parser($call);
+    return parser($call);
 }
 
-function mapP(Carrying $fn, Parser $parser) {
+function mapP(Carrying $fn, Parser $parser) : Parser {
     $call =  function($input) use ($fn, $parser) {
         $result = run($parser, $input);
         
         if ($result instanceof Success) {
-            if (is_array($result->RESULT)) {
-                $r = $fn->invoke(...$result->RESULT);
-            } else {
-                $r = $fn->invoke($result->RESULT);
-            }
+            // if (is_array($result->RESULT)) {
+            //     $r = $fn->invoke(...$result->RESULT);
+            // } else {
+            $r = $fn->invoke($result->RESULT);
+            // }
            
             return success($r, $result->REMAIN);
         } else  {
@@ -137,37 +131,95 @@ function mapP(Carrying $fn, Parser $parser) {
 }
 
 // can't understand
-function applyP(Parser $fp, Parser $xp) {
+function applyP(Parser $fp, Parser $xp) : Parser {
     $p = andThen($fp, $xp);
-    return mapP(carrying(function ($f, $x) {
+    return mapP(carrying(function ($param) {
+        [$f, $x] = $param;
         return $f->invoke($x);
     }), $p);
 }
 
 // lift a two parameter function to Parser World
-function lift2($f, $xp, $yp) {
+function lift2($f, $xp, $yp) : Parser {
     return applyP(applyP(returnP($f), $xp), $yp);
 }
 
-function sequence(Parser ...$parsers) {
-    if (empty($parsers)) {
-        return returnP([]);
-    }
+function sequence(array $parsers) : Parser {
+
+    $fn = carrying(function ($x, $y) {
+        $x[] = $y;
+        return $x;
+    });
     
-    $first = $parsers[0];
-    $other = array_slice($parsers, 1);
-    
-    $fn = function ($x, $y) {
-        if (is_array($x)) {
-            return $x[] = $y;
-        }  else {
-            return [$x, $y];
-        }
-    };
-    
-    return array_reduce($other, function($carry, $item) use ($fn) {
+    return array_reduce($parsers, function($carry, $item) use ($fn) {
         return lift2($fn, $carry, $item);
-    }, $first);
+    }, returnP([]));
+}
+
+function pstring($str) : Parser {
+    $arr =  array_map(function($i) {
+                return pchar($i);
+            }, preg_split('//u', $str, null, PREG_SPLIT_NO_EMPTY));
+
+    $fn = carrying(function ($x) {
+        return implode('', $x);
+    });
+
+    return mapP($fn, sequence($arr));
+}
+
+function parseZeroOrMore(Parser $parser, $input) : array {
+    $firstResult =  run($parser, $input);
+
+    if ($firstResult instanceof Failure) {
+        return [[], $input];
+    }
+
+    $result = [$firstResult->RESULT];
+
+    $parseZeroOrMore = $firstResult;
+    $remain = $firstResult->REMAIN;
+
+    while ($parseZeroOrMore instanceof Success) {
+        $parseZeroOrMore = run($parser, $remain);
+
+        if ($parseZeroOrMore instanceof Success) {
+            $result[] = $parseZeroOrMore->RESULT;
+            $remain = $parseZeroOrMore->REMAIN;
+        }
+    }
+
+    return [$result, $remain];
+}
+
+function many(Parser $parser) : Parser {
+    $innerFn = function ($input) use ($parser) {
+        $result = parseZeroOrMore($parser, $input);
+        return success(...$result);
+    };
+
+    return parser($innerFn);
+}
+
+function many1(Parser $parser) : Parser {
+    $fn = function ($input) use ($parser) {
+        $firstResult = run($parser, $input);
+
+        if ($firstResult instanceof Failure) {
+            return $firstResult;
+        }
+
+        $more = parseZeroOrMore($parser, $firstResult->REMAIN);
+
+        $result = [$firstResult->RESULT];
+        $result = array_merge($result, $more[0]);
+
+        return success($result, $more[1]);
+
+    };
+
+    return parser($fn);
+
 }
 
 
