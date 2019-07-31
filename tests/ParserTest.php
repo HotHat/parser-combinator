@@ -518,4 +518,25 @@ class ParserTest extends \PHPUnit\Framework\TestCase
     
         // $map = bindP()
     }
+
+
+    public function testFromStr2ReadAllChars() {
+
+
+        $arr = fromStr('')->readAllChars();
+        var_dump($arr);
+
+        $arr = fromStr('a')->readAllChars();
+        var_dump($arr);
+
+        $arr = fromStr('ab')->readAllChars();
+        var_dump($arr);
+
+        $arr = fromStr("a\nb")->readAllChars();
+        var_dump($arr);
+
+    }
+
+
 }
+

@@ -316,3 +316,12 @@ function whitespaceChar() {
     $label = 'whitespace';
     return satisfy(function ($x) {return IntlChar::isWhitespace($x);}, $label);
 }
+
+function fromStr($str) {
+    if (empty($str)) {
+        return new InputState([], new Position());
+    } else {
+        $lines = preg_split("/\r?\n/u", $str);
+        return new InputState($lines, new Position());
+    }
+}

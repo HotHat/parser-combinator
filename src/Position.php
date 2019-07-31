@@ -9,9 +9,9 @@ class Position
     public $line;
     public $column;
     
-    public function __construct() {
-        $this->line = 0;
-        $this->column = 0;
+    public function __construct(int $line = 0, int $column = 0) {
+        $this->line = $line;
+        $this->column = $column;
     }
     
     public function incrCol() {
@@ -20,5 +20,6 @@ class Position
     
     public function incrLine() {
         $this->line += 1;
+        $this->column = 0;
     }
 }

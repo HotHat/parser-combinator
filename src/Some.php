@@ -38,7 +38,7 @@ class Some extends Maybe
     }
 
     public function __get($name) {
-        if ($name == 'VAL') {
+        if ($name == 'val') {
             return $this->val;
         }
 
