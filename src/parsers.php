@@ -170,10 +170,11 @@ function pstring($str) : Parser {
     return mapP($fn, sequence($arr));
 }
 
-function parseZeroOrMore(Parser $parser, $input) : array {
-    $firstResult =  run($parser, $input);
+function parseZeroOrMore(Parser $parser, InputState $input) : array {
+    $firstResult =  runOnInput($parser, $input);
 
     if ($firstResult instanceof Failure) {
+        $input->backChar();
         return [[], $input];
     }
 
@@ -183,13 +184,15 @@ function parseZeroOrMore(Parser $parser, $input) : array {
     $remain = $firstResult->remain;
 
     while ($parseZeroOrMore instanceof Success) {
-        $parseZeroOrMore = run($parser, $remain);
+        $parseZeroOrMore = runOnInput($parser, $remain);
 
         if ($parseZeroOrMore instanceof Success) {
             $result[] = $parseZeroOrMore->result;
             $remain = $parseZeroOrMore->remain;
         }
     }
+
+    $input->backChar();
 
     return [$result, $remain];
 }
@@ -205,7 +208,7 @@ function many(Parser $parser) : Parser {
 
 function many1(Parser $parser) : Parser {
     $fn = function ($input) use ($parser) {
-        $firstResult = run($parser, $input);
+        $firstResult = runOnInput($parser, $input);
 
         if ($firstResult instanceof Failure) {
             return $firstResult;

@@ -29,7 +29,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $r = run($a, 'abc');
 
         $this->assertEquals(true, $r instanceof Success);
-        $this->assertEquals('a', $r->RESULT);
+        $this->assertEquals('a', $r->result);
     }
 
     public function testAndThen()
@@ -125,7 +125,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         //$r1 = run($p, '123A');
         //echo $r1;
         $this->assertEquals(true, $r1 instanceof Success);
-        $this->assertEquals('123', $r1->RESULT);
+        $this->assertEquals('123', $r1->result);
 
         $p2 = mapP(carrying(function ($x) {
             return intval($x);
@@ -133,7 +133,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $r2 = run($p2, '123A');
         echo $r2, PHP_EOL;
         $this->assertEquals(true, $r2 instanceof Success);
-        $this->assertEquals(123, $r2->RESULT);
+        $this->assertEquals(123, $r2->result);
 
         //$this->assertEquals(123, $r1->RESULT);
         //echo run($p, '12b'), PHP_EOL;
@@ -194,7 +194,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $r = run($z, '153A');
         echo $r;
         $this->assertEquals(true, $r instanceof Success);
-        $this->assertEquals(9, $r->RESULT);
+        $this->assertEquals(9, $r->result);
     }
 
     public function testApplyP2()
@@ -230,7 +230,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $r = run($x, '12A');
         echo $r;
         $this->assertEquals(true, $r instanceof Success);
-        $this->assertEquals(3, $r->RESULT);
+        $this->assertEquals(3, $r->result);
     }
 
     public function testSequence()
@@ -253,7 +253,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         echo $r;
 
         $this->assertEquals(true, $r instanceof Success);
-        $this->assertEquals(['1', '2', '3', '4'], $r->RESULT);
+        $this->assertEquals(['1', '2', '3', '4'], $r->result);
     }
 
     public function testPString() {
@@ -263,21 +263,21 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $p = pstring($str);
 
         $r = run($p, '1234A');
-        echo $r;
+        echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Success);
-        $this->assertEquals($str, $r->RESULT);
+        $this->assertEquals($str, $r->result);
 
         $str = '你好世界';
 
         $p = pstring($str);
 
         $r = run($p, '你好世界1234A');
-        echo $r;
+        echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Success);
-        $this->assertEquals($str, $r->RESULT);
+        $this->assertEquals($str, $r->result);
 
         $r = run($p, 'AB你好世界1234A');
-        echo $r;
+        echo $r, PHP_EOL;
         $this->assertEquals(false, $r instanceof Success);
     }
 
@@ -357,9 +357,13 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
         $r = run($optA, 'aA');
 
-        echo $r;
+        echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Success);
-        $this->assertEquals(true, $r->RESULT instanceof Some);
+        $this->assertEquals(true, $r->result instanceof Some);
+
+         $r = run($optA, 'Aa');
+        echo $r;
+        $this->assertEquals(true, $r->result instanceof None);
     }
 
     public function testKeepLeft() {
@@ -371,7 +375,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $r = run($optA, 'ab');
 
         echo $r, PHP_EOL;
-        $this->assertEquals('a', $r->RESULT);
+        $this->assertEquals('a', $r->result);
 
         $digit = anyof(array_map(function ($i) { return (string)$i; }, range(0, 9)));
 
@@ -379,7 +383,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
         $r = run($digitThenSemicolon, '5;');
         echo $r;
-        $this->assertEquals('5', $r->RESULT);
+        $this->assertEquals('5', $r->result);
     }
 
     public function testKeepRight() {
@@ -391,7 +395,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $r = run($optA, 'ab');
 
         echo $r;
-        $this->assertEquals('b', $r->RESULT);
+        $this->assertEquals('b', $r->result);
 
     }
 
@@ -411,19 +415,19 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
         $r1 = run($pint, '1ABC');
         echo $r1, PHP_EOL;
-        $this->assertEquals(true, $r1 instanceof Failure);
+        $this->assertEquals(true, $r1 instanceof Success);
 
         $r2 = run($pint, '11BC');
         echo $r2, PHP_EOL;
-        $this->assertEquals(true, $r2 instanceof Failure);
+        $this->assertEquals(true, $r2 instanceof Success);
 
         $r3 = run($pint, '123C');
         echo $r3, PHP_EOL;
-        $this->assertEquals(true, $r3 instanceof Failure);
+        $this->assertEquals(true, $r3 instanceof Success);
 
         $r4 = run($pint, '1234');
         echo $r4, PHP_EOL;
-        $this->assertEquals(true, $r4 instanceof Failure);
+        $this->assertEquals(true, $r4 instanceof Success);
 
 
         $r5 = run($pint, 'ABCD');
@@ -439,7 +443,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
         $r = run ($quoteInteger, '"1234"');
         echo $r, PHP_EOL;
-        $this->assertEquals('1234', $r->RESULT);
+        $this->assertEquals('1234', $r->result);
 
         $r = run ($quoteInteger, '1234');
         echo $r;
@@ -478,13 +482,13 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
 
         $r = run($zeroOrMoreDigitList, '1;');
-        echo $r;
+        echo $r, PHP_EOL;
 
         $r2 = run($zeroOrMoreDigitList, '1,2,3,4;');
-        echo $r2;
+        echo $r2, PHP_EOL;
 
         $r3 = run($zeroOrMoreDigitList, 'Z1,2,3,4;');
-        echo $r3;
+        echo $r3, PHP_EOL;
 
         $this->assertEquals(1, 1);
     }
