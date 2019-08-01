@@ -42,12 +42,7 @@ function satisfy(Closure $compare, string $label) : Parser {
     return parser($innerFn, $label);
 }
 
-function pchar($char) : Parser {
-    $label = sprintf("%s", $char);
-    return satisfy(function($a) use ($char) {
-        return $a == $char;
-    }, $label);
-}
+
 
 function run(Parser $parser, string $input) : Result {
     return runOnInput($parser, fromStr($input));
@@ -55,6 +50,15 @@ function run(Parser $parser, string $input) : Result {
 
 function runOnInput(Parser $parser, InputState $inputState) {
     return ($parser->parseFn)($inputState);
+}
+
+function fromStr($str) {
+    if (empty($str)) {
+        return new InputState([], new Position());
+    } else {
+        $lines = preg_split("/\r?\n/u", $str);
+        return new InputState($lines, new Position());
+    }
 }
 
 function andThen(Parser $pa, Parser $pb) : Parser {
@@ -158,17 +162,7 @@ function sequence(array $parsers) : Parser {
     }, returnP([]));
 }
 
-function pstring($str) : Parser {
-    $arr =  array_map(function($i) {
-                return pchar($i);
-            }, preg_split('//u', $str, null, PREG_SPLIT_NO_EMPTY));
 
-    $fn = carrying(function ($x) {
-        return implode('', $x);
-    });
-
-    return mapP($fn, sequence($arr));
-}
 
 function parseZeroOrMore(Parser $parser, InputState $input) : array {
     $firstResult =  runOnInput($parser, $input);
@@ -314,11 +308,14 @@ function setLabel($parser, $newLabel) {
     return parser($fn, $newLabel);
 }
 
-// parse a digit
 
-function digitChar() {
-    $label = 'digit';
-    return satisfy(function ($x) {return IntlChar::isdigit($x);}, $label);
+
+// standard parser
+function pchar($char) : Parser {
+    $label = sprintf("%s", $char);
+    return satisfy(function($a) use ($char) {
+        return $a == $char;
+    }, $label);
 }
 
 function whitespaceChar() {
@@ -326,11 +323,69 @@ function whitespaceChar() {
     return satisfy(function ($x) {return IntlChar::isWhitespace($x);}, $label);
 }
 
-function fromStr($str) {
-    if (empty($str)) {
-        return new InputState([], new Position());
-    } else {
-        $lines = preg_split("/\r?\n/u", $str);
-        return new InputState($lines, new Position());
-    }
+function manyChars($cp) {
+    $fn = carrying(function ($x) {return implode('',  $x);});
+    return mapP($fn, many($cp));
 }
+
+function manyChars1($cp) {
+    $fn = carrying(function ($x) {return implode('',  $x);});
+    return mapP($fn, many1($cp));
+}
+
+function pstring($str) : Parser {
+    $arr =  array_map(function($i) {
+        return pchar($i);
+    }, preg_split('//u', $str, null, PREG_SPLIT_NO_EMPTY));
+    
+    $fn = carrying(function ($x) {
+        return implode('', $x);
+    });
+    
+    return mapP($fn, sequence($arr));
+}
+
+function digitChar() {
+    $label = 'digit';
+    return satisfy(function ($x) {return IntlChar::isdigit($x);}, $label);
+}
+
+function pint() {
+    $label = 'integer';
+    $resultToInt = carrying(function($param) {
+        [$sign, $digits] = $param;
+        $i = intval($digits);
+        if ($sign instanceof Some) {
+            return -$i;
+        }
+        return $i;
+    });
+    
+    $digits = manyChars1(digitChar());
+    
+    return setLabel(mapP($resultToInt, andThen(optional(pchar('-')), $digits)), $label);
+}
+
+function pfloat() {
+    $lable = 'float';
+    $resultTofloat = carrying(function($param) {
+        [[[$sign, $digits1], $point], $digits2] = $param;
+        $fl = floatval(sprintf("%s.%s", $digits1, $digits2));
+        if ($sign instanceof Some) {
+            return -$fl;
+        }
+        return $fl;
+    });
+    
+    $digits = manyChars1(digitChar());
+    
+    $p = andThen(andThen(andThen(optional(pchar('-')), $digits), pchar('.')), $digits);
+    
+    return setLabel(mapP($resultTofloat, $p), $lable);
+    
+}
+
+
+
+
+

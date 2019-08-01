@@ -3,6 +3,8 @@
 namespace Wow;
 
 
+use SebastianBergmann\CodeCoverage\Report\PHP;
+
 class ParserTest extends \PHPUnit\Framework\TestCase
 {
 
@@ -548,15 +550,31 @@ class ParserTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testAAA() {
-        // $pareAB = setLabel(andThen(pchar('A'), pchar('B')), 'AB');
-
-        // $r = run($pareAB, 'A|C');
-        //
-        // echo $r;
-
+    public function testSomeX() {
+        echo run(pstring("AB"), "ABC"), PHP_EOL;
+        echo run(pstring("AB"), "A|C"), PHP_EOL;
+        
+        
+        $spaces = many(whitespaceChar());
+        $spaces1 = many1(whitespaceChar());
+    
+    
+        echo run($spaces, "      \n\tABC"), PHP_EOL;
+        echo run($spaces, "A"), PHP_EOL;
+        
+        echo run($spaces1, " ABC"), PHP_EOL;
+        echo run($spaces1, "A"), PHP_EOL;
+        
+        echo run(pint(), "-123Z"), PHP_EOL;
+        echo run(pint(), "-Z123X"), PHP_EOL;
+        echo run(pfloat(), "-123.45Z"), PHP_EOL;
+        echo run(pfloat(), "-123Z45"), PHP_EOL;
+        
+        echo run(orThen(pint(), pfloat()), "-123"), PHP_EOL;
+        echo run(orThen(pfloat(), pint()), "-123.45");
+        
+        $this->assertEquals(1, 1);
     }
-
 
 
 
