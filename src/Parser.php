@@ -3,12 +3,13 @@
 
 namespace Wow;
 
+use Closure;
 
 class Parser {
     public $parseFn;
     public $label;
 
-    public function __construct($fn, $label) {
+    public function __construct(Closure $fn, string $label) {
         $this->parseFn = $fn;
         $this->label = $label;
     }

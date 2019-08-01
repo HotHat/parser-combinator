@@ -9,8 +9,8 @@ function carrying($fun) {
     return new Carrying($fun);
 }
 
-function failure($label, $reason) {
-    return new Failure($label, $reason);
+function failure(string $label, string $reason, ParserPosition $pos) {
+    return new Failure($label, $reason, $pos);
 }
 
 function parser($fn, $label = '') {
@@ -25,18 +25,21 @@ function success($result, $remain) {
 
 // parser combinator
 function satisfy(Closure $compare, string $label) : Parser {
-    $result =  function($input) use ($compare, $label) {
-        if (empty($input)) {
-            return failure($label,'No more input');
+    $innerFn =  function(InputState $input) use ($compare, $label) {
+        $charOpt = $input->nextChar();
+        if ($charOpt instanceof None) {
+            $pos = $input->toParserPosition();
+            return failure($label,'No more input', $pos);
         }
-        $char = mb_substr($input, 0, 1);
-        if ($compare($char)) {
-            return success($char, mb_substr($input, 1));
+
+        if ($compare($charOpt->val)) {
+            return success($charOpt->val, $input);
         } else  {
-            return failure($label, sprintf('Failure Expecting: %s. Got: %s', $label, $char));
+            $err = sprintf("Unexpected '%s'", $charOpt->val);
+            return failure($label, $err, $input->toParserPosition());
         }
     };
-    return parser($result, $label);
+    return parser($innerFn, $label);
 }
 
 function pchar($char) : Parser {
@@ -47,8 +50,11 @@ function pchar($char) : Parser {
 }
 
 function run(Parser $parser, string $input) : Result {
-    $fun = $parser->parseFn;
-    return $fun($input);
+    return runOnInput($parser, fromStr($input));
+}
+
+function runOnInput(Parser $parser, InputState $inputState) {
+    return ($parser->parseFn)($inputState);
 }
 
 function andThen(Parser $pa, Parser $pb) : Parser {
@@ -65,15 +71,14 @@ function andThen(Parser $pa, Parser $pb) : Parser {
 
 function orThen($pa, $pb) : Parser {
     $label = sprintf("%s orThen %s", $pa->label, $pb->label);
-    $fun = function ($str) use ($pa, $pb) {
-        $f1 = $pa->parseFn;
-        $res1 = $f1($str);
+    $fun = function (InputState $input) use ($pa, $pb) {
+        $res1 = runOnInput($pa, $input);
         if ($res1 instanceof Success) {
             return $res1;
         }
 
-        $f2 = $pb->parseFn;
-        return $f2($str);
+        $input->backChar();
+        return runOnInput($pb, $input);
     };
 
     return setLabel(parser($fun), $label);
@@ -106,6 +111,7 @@ function returnP($x) : Parser {
     return parser($call);
 }
 
+/*
 function mapP(Carrying $fn, Parser $parser) : Parser {
     $call =  function($input) use ($fn, $parser) {
         $result = run($parser, $input);
@@ -133,6 +139,7 @@ function applyP(Parser $fp, Parser $xp) : Parser {
         return $f->invoke($x);
     }), $p);
 }
+*/
 
 // lift a two parameter function to Parser World
 function lift2($f, $xp, $yp) : Parser {
@@ -258,33 +265,32 @@ function sepBy(Parser $p, Parser $sep) {
 
 
 function bindP(Carrying $fn, Parser $parser) {
-    $fun = function ($input) use ($fn, $parser) {
-        $f1 = $parser->parseFn;
-        $res1 = $f1($input);
+    $fun = function (InputState $input) use ($fn, $parser) {
+        $res1 = runOnInput($parser, $input);
         if ($res1 instanceof Failure) {
             return $res1;
         }
 
         $p2 = $fn->invoke($res1->result);
 
-        return run($p2, $res1->remain);
+        return runOnInput($p2, $input);
     };
 
     return parser($fun, 'unknown');
 }
 
 // bindP version
-function mapP2(Carrying $fn, Parser $parser) {
+function mapP(Carrying $fn, Parser $parser) {
     $f = carrying(function($x) use ($fn) {return returnP($fn->invoke($x));});
     return bindP($f, $parser);
 }
 
 // bindP version
-function applyP2(Parser $fp, Parser $xp) {
+function applyP(Parser $fp, Parser $xp) {
     $fn = carrying(function ($f) use ($xp) {
        // // $f2 = carrying(function ($x) use ($f) { return returnP($f->invoke($x));});
        // return bindP($f2, $xp);
-        return mapP2($f, $xp);
+        return mapP($f, $xp);
     });
 
     return bindP($fn, $fp);
@@ -292,13 +298,13 @@ function applyP2(Parser $fp, Parser $xp) {
 
 // update the label in the parser
 function setLabel($parser, $newLabel) {
-    $fn = function ($input) use ($parser, $newLabel) {
-        $result =  ($parser->parseFn)($input);
+    $fn = function (InputState $input) use ($parser, $newLabel) {
+        $result = runOnInput($parser, $input);
         
         if ($result instanceof Success) {
             return $result;
         } else {
-            return failure($newLabel, $result->reason);
+            return failure($newLabel, $result->reason, $input->toParserPosition());
         }
         
     };

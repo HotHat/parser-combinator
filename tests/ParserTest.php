@@ -523,19 +523,37 @@ class ParserTest extends \PHPUnit\Framework\TestCase
     public function testFromStr2ReadAllChars() {
 
 
-        $arr = fromStr('')->readAllChars();
+        // $arr = fromStr('')->readAllChars();
+        // var_dump($arr);
+
+        // $arr = fromStr('a')->readAllChars();
+        // var_dump($arr);
+
+        // $arr = fromStr('ab')->readAllChars();
+        // var_dump($arr);
+
+        $arr = fromStr("a你好\nb")->readAllChars();
         var_dump($arr);
 
-        $arr = fromStr('a')->readAllChars();
-        var_dump($arr);
+        // var_dump(fromStr("a\nb")->toParserPosition());
 
-        $arr = fromStr('ab')->readAllChars();
-        var_dump($arr);
+        // echo sprintf("%6s^%s", 5, 'aa');
+        echo new Failure('identifier', 'identifier', new ParserPosition('123 ab|cd', 1, 6)), PHP_EOL;
+        echo new Failure('identifier', 'identifier', new ParserPosition('你23 ab|cd', 1, 6));
+        $this->assertEquals(1, 1);
+    }
 
-        $arr = fromStr("a\nb")->readAllChars();
-        var_dump($arr);
+
+    public function testAAA() {
+        // $pareAB = setLabel(andThen(pchar('A'), pchar('B')), 'AB');
+
+        // $r = run($pareAB, 'A|C');
+        //
+        // echo $r;
 
     }
+
+
 
 
 }

@@ -27,7 +27,7 @@ class InputState
             $currentLine = $this->currentLine();
 
             if ($this->position->column < mb_strlen($currentLine)) {
-                $char = $currentLine[$this->position->column];
+                $char = mb_substr($currentLine, $this->position->column, 1);
                 $this->position->incrCol();
 
             } else {
@@ -37,6 +37,27 @@ class InputState
 
             return new Some($char);
         }
+    }
+
+    public function backChar() {
+        if ($this->position->column > 0) {
+            $this->position->decCol();
+            return;
+        }
+
+        if ($this->position->line == 0) {
+            assert(false, 'This is the first line can\'t back to preview line');
+        }
+
+        $pre = $this->lines[$this->position->line - 1];
+
+        $col = mb_strlen($pre);
+        $this->position->decLine($col);
+    }
+
+    public function toParserPosition() {
+        $currentLine = $this->currentLine();
+        return new ParserPosition($currentLine, $this->position->line, $this->position->column);
     }
 
     public function readAllChars() {

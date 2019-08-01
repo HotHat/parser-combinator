@@ -21,7 +21,7 @@ class Success extends Result
         } else {
             $val = strval($this->result);
         }
-        return sprintf('Success(%s, "%s")', $val, $this->remain);
+        return sprintf('Success(%s, "%s")', $val, json_encode($this->remain->readAllchars()));
     }
 
     public function __get($name) {

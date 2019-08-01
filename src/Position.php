@@ -17,9 +17,17 @@ class Position
     public function incrCol() {
         $this->column += 1;
     }
-    
+
+    public function decCol() {
+        $this->column -= 1;
+    }
+
     public function incrLine() {
         $this->line += 1;
         $this->column = 0;
+    }
+    public function decLine($column) {
+        $this->line -= 1;
+        $this->column = $column;
     }
 }
