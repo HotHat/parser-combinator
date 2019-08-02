@@ -4,9 +4,9 @@ namespace Wow\Json;
 
 use IntlChar;
 use Wow\Some;
+use Wow\Json\JsonNumber;
 
-use function Wow\{
-    manyChars,
+use function Wow\{manyChars,
     manyChars1,
     optional,
     pchar,
@@ -19,8 +19,8 @@ use function Wow\{
     mapP,
     anyOf,
     keepLeft,
-    andThen
-};
+    andThen,
+    spaces1};
 
 class JsonParser
 {
@@ -100,7 +100,7 @@ class JsonParser
 
         $digitOneNine = satisfy(function($ch) { return IntlChar::isdigit($ch) && $ch != '0';}, '1-9');
 
-        $digit = satisfy(function($ch) { return IntlChar::isdigit($ch)}, 'digit');
+        $digit = satisfy(function($ch) { return IntlChar::isdigit($ch);}, 'digit');
 
         $point = pchar('.');
 
@@ -108,10 +108,9 @@ class JsonParser
 
         $optPlusMinus = optional(orThen(pchar('-'), pchar('+')));
 
-        $nonZeroInt = mapP(function($first) {
-            return function($rest) use ($first) {
-                return $first . $rest;
-            };
+        $nonZeroInt = mapP(function($param) {
+            [$first, $rest] = $param;
+            return $first . $rest;
         }, andThen($digitOneNine, manyChars($digit)));
 
         $intPart = orThen($zero, $nonZeroInt);
@@ -125,7 +124,7 @@ class JsonParser
 
         $opt = function ($maybe) {
             if ($maybe instanceof Some) {
-                return $$maybe->val;
+                return $maybe->val;
             }
             return '';
         };
@@ -137,13 +136,25 @@ class JsonParser
             $f = $opt($fractionPart);
             $fractionPartStr = $f == '' ? '' : '.' . $f;
 
+            $exp = $opt($expPart);
 
+            if ($exp == '') {
+                $expPartStr = '';
+            } else {
+                [$exOptSign, $exDigits] =  $exp;
+                $expPartStr = 'e' . $opt($exOptSign) . $exDigits;
+            }
 
+            return new JsonNumber(floatval($signStr . $intPart . $fractionPartStr . $expPartStr));
         };
 
         return setLabel(mapP($convertToJNumber, $parser), 'number');
 
 
+    }
+
+    public function jNumber_() {
+        return keepLeft($this->jNumber(), spaces1());
     }
 
 

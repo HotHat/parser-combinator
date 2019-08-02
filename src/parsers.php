@@ -336,6 +336,14 @@ function whitespaceChar() {
     return satisfy(function ($x) {return IntlChar::isWhitespace($x);}, $label);
 }
 
+function spaces() {
+    return many(whitespaceChar());
+}
+
+function spaces1() {
+    return many1(whitespaceChar());
+}
+
 function manyChars($cp) {
     $fn = function ($x) {return implode('',  $x);};
     return mapP($fn, many($cp));

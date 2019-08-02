@@ -19,4 +19,8 @@ class JsonValue
         assert(false, 'Some just get value by VAL ');
     }
 
+    public function __toString() {
+        return (string)$this->val;
+    }
+
 }

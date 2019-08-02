@@ -121,9 +121,41 @@ class ParserJsonTest extends \PHPUnit\Framework\TestCase
 
     }
 
-    public function testNNN() {
-        $unicodeChar = "\u{1000}";
-        echo $unicodeChar;
+    public function testNumber() {
+        $r = run($this->parser->jNumber(), '123');
+        echo $r, PHP_EOL;
+        $this->assertEquals(true, $r instanceof Success);
+
+        $r = run($this->parser->jNumber(), '-123');
+        echo $r, PHP_EOL;
+        $this->assertEquals(true, $r instanceof Success);
+
+        $r = run($this->parser->jNumber(), '123.4');
+        echo $r, PHP_EOL;
+        $this->assertEquals(true, $r instanceof Success);
+
+        $r = run($this->parser->jNumber_(), '-123.');
+        echo $r, PHP_EOL;
+        $this->assertEquals(false, $r instanceof Success);
+
+        $r = run($this->parser->jNumber_(), '00.1');
+        echo $r, PHP_EOL;
+        $this->assertEquals(false, $r instanceof Success);
+
+        $r = run($this->parser->jNumber_(), '0.1');
+        echo $r, PHP_EOL;
+        $this->assertEquals(true, $r instanceof Success);
+
+        $r = run($this->parser->jNumber(), '123.4e5');
+        echo $r, PHP_EOL;
+        $this->assertEquals(true, $r instanceof Success);
+
+        $r = run($this->parser->jNumber(), '123.4e-5');
+        echo $r, PHP_EOL;
+        $this->assertEquals(true, $r instanceof Success);
+
+
+
     }
 
 }
