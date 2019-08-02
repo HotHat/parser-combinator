@@ -20,9 +20,10 @@ class Failure extends Result
         $colPos = $this->parserPosition->column;
         $linePos = $this->parserPosition->line;
         $errorLine   = $this->parserPosition->currentLine;
-        $sub = mb_substr($errorLine, 0, $colPos);
+        $sub = strlen(mb_substr($errorLine, 0, $colPos));
+        $times = $sub > 0 ? $sub - 1 : 0;
 
-        $failure = sprintf("%s^%s", str_repeat(' ', strlen($sub) - 1), $this->reason);
+        $failure = sprintf("%s^%s", str_repeat(' ', $times), $this->reason);
         return sprintf("Line: %d Col:%d Error parsing %s\n%s\n%s", $linePos,
             $colPos, $this->label, $errorLine, $failure);
     }

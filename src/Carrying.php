@@ -22,12 +22,17 @@ class Carrying
         $this->params = array_merge($this->params, $params);
         if (count($this->params) == $this->argNum ) {
             $arr = $this->params;
-            $this->params = [];
-            return ($this->fun)(...$arr);
+            $result =($this->fun)(...$arr);
+            $this->clear();
+            return $result;
         } else if (count($this->params) > $this->argNum )  {
             assert(false, 'parameters more than ' . $this->argNum);
         }
 
         return $this;
+    }
+
+    public function clear() {
+        $this->params = [];
     }
 }

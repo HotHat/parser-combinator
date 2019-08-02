@@ -42,7 +42,7 @@ class Some extends Maybe
             return $this->val;
         }
 
-        assert(false, 'Some just get value by VAL ');
+        assert(false, 'Some just get value by val ');
     }
 
     public function __toString() {

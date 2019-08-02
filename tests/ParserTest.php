@@ -3,8 +3,6 @@
 namespace Wow;
 
 
-use SebastianBergmann\CodeCoverage\Report\PHP;
-
 class ParserTest extends \PHPUnit\Framework\TestCase
 {
 
@@ -141,38 +139,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         //echo run($p, '12b'), PHP_EOL;
     }
 
-    public function testMapP2()
-    {
-        $fn = carrying(function ($param) {
-            [[$a, $b], $c] = $param;
-            return $a . $b . $c;
-        });
-        $parseDigit = anyof(array_map(function ($i) {
-            return (string)$i;
-        }, range(0, 9)));
-        $parseThreeDigits = andThen(andThen($parseDigit, $parseDigit), $parseDigit);
 
-        //$r1 = run($parseThreeDigits, '123A');
-        $p = mapP2($fn, $parseThreeDigits);
-        //$p = mapP(function($x) {return intval($x);}, $p);
-        $r1 = run($p, '123A');
-        echo $r1, PHP_EOL;
-        //$r1 = run($p, '123A');
-        //echo $r1;
-        $this->assertEquals(true, $r1 instanceof Success);
-        $this->assertEquals('123', $r1->RESULT);
-
-        $p2 = mapP2(carrying(function ($x) {
-            return intval($x);
-        }), $p);
-        $r2 = run($p2, '123A');
-        echo $r2, PHP_EOL;
-        $this->assertEquals(true, $r2 instanceof Success);
-        $this->assertEquals(123, $r2->RESULT);
-
-        //$this->assertEquals(123, $r1->RESULT);
-        //echo run($p, '12b'), PHP_EOL;
-    }
 
     public function testReturnP()
     {
@@ -199,24 +166,6 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals(9, $r->result);
     }
 
-    public function testApplyP2()
-    {
-        $fp = returnP(carrying(function ($x, $y, $z) {
-            return $x + $y + $z;
-        }));
-
-        $p1 = pchar('1');
-        $p2 = pchar('5');
-        $p3 = pchar('3');
-        $x = applyP2($fp, $p1);
-        $y = applyP2($x, $p2);
-        $z = applyP2($y, $p3);
-
-        $r = run($z, '153A');
-        echo $r;
-        $this->assertEquals(true, $r instanceof Success);
-        $this->assertEquals(9, $r->RESULT);
-    }
 
     public function testLift2()
     {
@@ -415,9 +364,9 @@ class ParserTest extends \PHPUnit\Framework\TestCase
     public function testPint() {
         $pint = $this->pint();
 
-        $r1 = run($pint, '1ABC');
-        echo $r1, PHP_EOL;
-        $this->assertEquals(true, $r1 instanceof Success);
+        // $r1 = run($pint, '1ABC');
+        // echo $r1, PHP_EOL;
+        // $this->assertEquals(true, $r1 instanceof Success);
 
         $r2 = run($pint, '11BC');
         echo $r2, PHP_EOL;
@@ -442,6 +391,13 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $pint = $this->pint();
 
         $quoteInteger = between($pdoublequote, $pint, $pdoublequote);
+
+        $r = run ($pint, '1234');
+        echo $r, PHP_EOL;
+        $this->assertEquals('1234', $r->result);
+
+        $r = run (keepRight($pdoublequote, $pint), '"12345');
+        echo $r, PHP_EOL;
 
         $r = run ($quoteInteger, '"1234"');
         echo $r, PHP_EOL;
@@ -520,8 +476,19 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         //$p = mapP(function($x) {return intval($x);}, $p);
         $r1 = run($mp, 'abc');
         echo $r1, PHP_EOL;
-    
-    
+
+        $this->assertEquals(true, $r1 instanceof Success);
+
+
+        echo '---------------multiply time test-------', PHP_EOL;
+        $r1 = run($mp, 'abc');
+        echo $r1, PHP_EOL;
+        $r1 = run($mp, 'abc');
+        echo $r1, PHP_EOL;
+        $r1 = run($mp, 'abc');
+        echo $r1, PHP_EOL;
+        $r1 = run($mp, 'abc');
+        echo $r1, PHP_EOL;
         // $map = bindP()
     }
 

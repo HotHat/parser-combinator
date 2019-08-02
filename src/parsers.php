@@ -5,6 +5,10 @@ use Closure;
 use IntlChar;
 
 // class helper functions
+function copy($obj) {
+    return unserialize(serialize($obj));
+}
+
 function carrying($fun) {
     return new Carrying($fun);
 }
@@ -76,19 +80,21 @@ function andThen(Parser $pa, Parser $pb) : Parser {
 function orThen($pa, $pb) : Parser {
     $label = sprintf("%s orThen %s", $pa->label, $pb->label);
     $fun = function (InputState $input) use ($pa, $pb) {
+        // for backtrace
+        $original =  copy($input);
         $res1 = runOnInput($pa, $input);
         if ($res1 instanceof Success) {
             return $res1;
         }
 
-        $input->backChar();
-        return runOnInput($pb, $input);
+        // $input->backChar();
+        return runOnInput($pb, $original);
     };
 
     return setLabel(parser($fun), $label);
 }
 
-function choice(Parser ...$parsers) : Parser {
+function choice(array $parsers) : Parser {
     assert(count($parsers) >= 1);
     $first = $parsers[0];
     $other = array_slice($parsers, 1);
@@ -104,7 +110,7 @@ function anyOf($arr) : Parser {
     $label = sprintf("Any of %s", json_encode($arr));
     $arr =  array_map(function($i) {return pchar($i);}, $arr);
 
-    return setLabel(choice(...$arr), $label);
+    return setLabel(choice($arr), $label);
 }
 
 function returnP($x) : Parser {
@@ -165,30 +171,32 @@ function sequence(array $parsers) : Parser {
 
 
 function parseZeroOrMore(Parser $parser, InputState $input) : array {
+    // for backtrace
+    $original = copy($input);
+
     $firstResult =  runOnInput($parser, $input);
 
     if ($firstResult instanceof Failure) {
-        $input->backChar();
-        return [[], $input];
+        return [[], $original];
     }
 
     $result = [$firstResult->result];
 
     $parseZeroOrMore = $firstResult;
-    $remain = $firstResult->remain;
 
-    while ($parseZeroOrMore instanceof Success) {
+    do {
+        // for backtrace
+        $remain = $parseZeroOrMore->remain;
+        $remainP = copy($remain);
         $parseZeroOrMore = runOnInput($parser, $remain);
 
         if ($parseZeroOrMore instanceof Success) {
             $result[] = $parseZeroOrMore->result;
             $remain = $parseZeroOrMore->remain;
         }
-    }
+    } while ($parseZeroOrMore instanceof Success);
 
-    $input->backChar();
-
-    return [$result, $remain];
+    return [$result, $remainP ?? $remain];
 }
 
 function many(Parser $parser) : Parser {
@@ -207,6 +215,9 @@ function many1(Parser $parser) : Parser {
         if ($firstResult instanceof Failure) {
             return $firstResult;
         }
+
+        // $t = $firstResult->remain;
+        // $ol = new InputState($t->lines, new Position($t->position->line, $t->position->column));
 
         $more = parseZeroOrMore($parser, $firstResult->remain);
 
@@ -270,7 +281,7 @@ function bindP(Carrying $fn, Parser $parser) {
 
         $p2 = $fn->invoke($res1->result);
 
-        return runOnInput($p2, $input);
+        return runOnInput($p2, $res1->remain);
     };
 
     return parser($fun, 'unknown');
