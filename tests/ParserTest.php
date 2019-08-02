@@ -68,7 +68,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
     {
         $pa = pchar('a');
         $pb = pchar('b');
-        $choice = choice($pa, $pb);
+        $choice = choice([$pa, $pb]);
         echo run($choice, 'abc'), PHP_EOL;
         echo run($choice, 'bdc'), PHP_EOL;
         echo run($choice, 'cdc'), PHP_EOL;
@@ -108,10 +108,10 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
     public function testMapP()
     {
-        $fn = carrying(function ($param) {
+        $fn = function ($param) {
             [[$a, $b], $c] = $param;
             return $a . $b . $c;
-        });
+        };
         $parseDigit = anyof(array_map(function ($i) {
             return (string)$i;
         }, range(0, 9)));
@@ -127,9 +127,9 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals(true, $r1 instanceof Success);
         $this->assertEquals('123', $r1->result);
 
-        $p2 = mapP(carrying(function ($x) {
+        $p2 = mapP(function ($x) {
             return intval($x);
-        }), $p);
+        }, $p);
         $r2 = run($p2, '123A');
         echo $r2, PHP_EOL;
         $this->assertEquals(true, $r2 instanceof Success);
@@ -149,9 +149,13 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
     public function testApplyP()
     {
-        $fp = returnP(carrying(function ($x, $y, $z) {
-            return $x + $y + $z;
-        }));
+        $fp = returnP(function ($x) {
+            return function($y) use ($x) {
+                return function ($z) use ($x, $y) {
+                    return $x + $y + $z;
+                };
+            };
+        });
 
         $p1 = pchar('1');
         $p2 = pchar('5');
@@ -169,9 +173,11 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
     public function testLift2()
     {
-        $fp = carrying(function ($x, $y) {
-            return $x + $y;
-        });
+        $fp = function ($x) {
+            return function ($y) use ($x) {
+                return $x + $y;
+            };
+        };
 
         $xp = pchar('1');
         $yp = pchar('2');
@@ -354,7 +360,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
         $digit = anyof(array_map(function ($i) { return (string)$i; }, range(0, 9)));
 
-        $fn = carrying(function($x) {return intval(implode('', $x));});
+        $fn = function($x) {return intval(implode('', $x));};
 
         $digits = many1($digit);
 
@@ -453,10 +459,10 @@ class ParserTest extends \PHPUnit\Framework\TestCase
 
     public function testBindP()
     {
-        $fn = carrying(function ($param) {
+        $fn = function ($param) {
             [[$a, $b], $c] = $param;
             return $a . $b . $c;
-        });
+        };
     
         $pa = pchar('a');
         $pb = pchar('b');
@@ -464,15 +470,17 @@ class ParserTest extends \PHPUnit\Framework\TestCase
         $p = andThen(andThen($pa, $pb), $pc);
     
         //$r1 = run($parseThreeDigits, '123A');
-        $mapP = function ($f, $p) {
-            $fn = carrying(function ($x) use ($f) {
-                return returnP($f->invoke($x));
-            });
-            return bindP($fn, $p);
-        };
-    
+        // $mapP = function ($param) {
+        //     [$f, $p] = $param;
+        //
+        //     $fn = function ($x) use ($f) {
+        //         return returnP($f($x));
+        //     };
+        //     return bindP($fn, $p);
+        // };
+        //
         // $p = mapP($fn, $p);
-        $mp = $mapP($fn, $p);
+        $mp = mapP($fn, $p);
         //$p = mapP(function($x) {return intval($x);}, $p);
         $r1 = run($mp, 'abc');
         echo $r1, PHP_EOL;

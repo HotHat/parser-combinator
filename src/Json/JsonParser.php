@@ -1,37 +1,15 @@
 <?php
-/**
- * Created by cncn.com.
- * User: lyhux
- * Date: 2019/8/2
- * Time: 9:47
- *　　　　　　　　┏┓　　　┏┓+ +
- *　　　　　　　┏┛┻━━━┛┻┓ + +
- *　　　　　　　┃　　　　　　　┃ 　
- *　　　　　　　┃　　　━　　　┃ ++ + + +
- *　　　　　　 ████━████ ┃+
- *　　　　　　　┃　　　　　　　┃ +
- *　　　　　　　┃　　　┻　　　┃
- *　　　　　　　┃　　　　　　　┃ + +
- *　　　　　　　┗━┓　　　┏━┛
- *　　　　　　　　　┃　　　┃　　　　　　　　　　　
- *　　　　　　　　　┃　　　┃ + + + +
- *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting　　　　　　　
- *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug　　
- *　　　　　　　　　┃　　　┃
- *　　　　　　　　　┃　　　┃　　+　　　　　　　　　
- *　　　　　　　　　┃　 　　┗━━━┓ + +
- *　　　　　　　　　┃ 　　　　　　　┣┓
- *　　　　　　　　　┃ 　　　　　　　┏┛
- *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
- *　　　　　　　　　　┃┫┫　┃┫┫
- *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
- */
 
 namespace Wow\Json;
 
-use function Wow\{manyChars,
+use IntlChar;
+use Wow\Some;
+
+use function Wow\{
+    manyChars,
+    manyChars1,
+    optional,
     pchar,
-    carrying,
     choice,
     keepRight,
     orThen,
@@ -41,15 +19,16 @@ use function Wow\{manyChars,
     mapP,
     anyOf,
     keepLeft,
-    andThen};
+    andThen
+};
 
 class JsonParser
 {
 
     public function returnObject($obj) {
-        return carrying(function($param) use ($obj) {
+        return function($param) use ($obj) {
             return $obj;
-        });
+        };
     }
 
     public function jNull() {
@@ -82,7 +61,7 @@ class JsonParser
         ];
         $parr = array_map(function($item) {
             $parser = pstring($item[0]);
-            $fn = carrying(function ($param) use ($item) {return $item[1];});
+            $fn = function ($param) use ($item) {return $item[1];};
             return mapP($fn, $parser);
         }, $map);
 
@@ -95,10 +74,10 @@ class JsonParser
         $hexdigit = anyOf(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                             'A', 'B', 'C', 'D', 'E', 'F', 'a', 'b', 'c', 'd', 'e', 'f']);
 
-        $convertToChar = carrying(function ($param) {
+        $convertToChar = function ($param) {
             [[[$h1,$h2], $h3], $h4] = $param;
             return sprintf('\u%s%s%s%s', $h1, $h2, $h3, $h4);
-        });
+        };
         $parser = andThen(andThen(andThen(keepRight(keepRight($backslash, $uChar), $hexdigit), $hexdigit), $hexdigit), $hexdigit);
         return mapP($convertToChar, $parser);
 
@@ -109,9 +88,62 @@ class JsonParser
         $jchar = orThen(orThen($this->jUnescapedChar(), $this->jEscapedChar()), $this->jUnicodeChar());
 
         $parser = keepLeft(keepRight($quote, manyChars($jchar)), $quote);
-        $fun = carrying(function($str) { return new JsonString($str);});
+        $fun = function($str) {return new JsonString($str);};
 
         return setLabel(mapP($fun, $parser), "quoted string");
+    }
+
+    public function jNumber() {
+        $optSign = optional(pchar('-'));
+
+        $zero = pstring('0');
+
+        $digitOneNine = satisfy(function($ch) { return IntlChar::isdigit($ch) && $ch != '0';}, '1-9');
+
+        $digit = satisfy(function($ch) { return IntlChar::isdigit($ch)}, 'digit');
+
+        $point = pchar('.');
+
+        $e = orThen(pchar('e'), pchar('E'));
+
+        $optPlusMinus = optional(orThen(pchar('-'), pchar('+')));
+
+        $nonZeroInt = mapP(function($first) {
+            return function($rest) use ($first) {
+                return $first . $rest;
+            };
+        }, andThen($digitOneNine, manyChars($digit)));
+
+        $intPart = orThen($zero, $nonZeroInt);
+
+        $fractionPart = keepRight($point, manyChars1($digit));
+
+        $exponentPart = andThen(keepRight($e, $optPlusMinus), manyChars1($digit));
+
+
+        $parser = andThen(andThen(andThen($optSign, $intPart), optional($fractionPart)), optional($exponentPart));
+
+        $opt = function ($maybe) {
+            if ($maybe instanceof Some) {
+                return $$maybe->val;
+            }
+            return '';
+        };
+
+        $convertToJNumber = function ($param) use ($opt) {
+            [[[$optSign, $intPart], $fractionPart], $expPart] = $param;
+
+            $signStr = $opt($optSign);
+            $f = $opt($fractionPart);
+            $fractionPartStr = $f == '' ? '' : '.' . $f;
+
+
+
+        };
+
+        return setLabel(mapP($convertToJNumber, $parser), 'number');
+
+
     }
 
 

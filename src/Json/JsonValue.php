@@ -8,7 +8,7 @@ class JsonValue
 {
 
     protected $val;
-    public function __construct(bool $val) {
+    public function __construct($val) {
         $this->val = $val;
     }
 

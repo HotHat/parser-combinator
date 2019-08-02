@@ -25,13 +25,13 @@ class ParserJsonTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals(true, $r instanceof Failure);
 
         echo '----------------------- 2 -----------------------', PHP_EOL;
-        $pnull = $this->parser->jNull();
+        // $pnull = $this->parser->jNull();
         $r1 = run($pnull, 'null');
         echo $r1, PHP_EOL;
         $this->assertEquals(true, $r1 instanceof Success);
 
         echo '----------------------- 3 -----------------------', PHP_EOL;
-        $pnull = $this->parser->jNull();
+        // $pnull = $this->parser->jNull();
         $r2 = run($pnull, 'nuyl');
         echo $r2, PHP_EOL;
         $this->assertEquals(true, $r2 instanceof Failure);
@@ -44,17 +44,17 @@ class ParserJsonTest extends \PHPUnit\Framework\TestCase
         echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Success);
 
-        $pbool = $this->parser->jBool();
+        // $pbool = $this->parser->jBool();
         $r = run($pbool, 'false');
         echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Success);
 
-        $pbool = $this->parser->jBool();
+        // $pbool = $this->parser->jBool();
         $r = run($pbool, 'falsy');
         echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Failure);
 
-        $pbool = $this->parser->jBool();
+        // $pbool = $this->parser->jBool();
         $r = run($pbool, 'falsy');
         echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Failure);
@@ -103,22 +103,27 @@ class ParserJsonTest extends \PHPUnit\Framework\TestCase
         echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Success);
 
-        $r = run($this->parser->jUnicodeChar(), '"a"');
+        $r = run($this->parser->jString(), '"a"');
+        echo $r, PHP_EOL;
+        $this->assertEquals(true, $r instanceof Success);
+        //
+        $r = run($this->parser->jString(), '"ab"');
         echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Success);
 
-        $r = run($this->parser->jUnicodeChar(), '"ab"');
+        $r = run($this->parser->jString(), '"ab\\tde"');
+        echo $r, PHP_EOL;
+        // $this->assertEquals(true, $r instanceof Success);
+        //
+        $r = run($this->parser->jString(), '"\u304a\u306f\u3088\u3046\u3054\u3056\u3044\u307e\u3059"');
         echo $r, PHP_EOL;
         $this->assertEquals(true, $r instanceof Success);
 
-        $r = run($this->parser->jUnicodeChar(), '"ab\\tde"');
-        echo $r, PHP_EOL;
-        $this->assertEquals(true, $r instanceof Success);
+    }
 
-        $r = run($this->parser->jUnicodeChar(), '"ab\\u263Ade"');
-        echo $r, PHP_EOL;
-        $this->assertEquals(true, $r instanceof Success);
-
+    public function testNNN() {
+        $unicodeChar = "\u{1000}";
+        echo $unicodeChar;
     }
 
 }

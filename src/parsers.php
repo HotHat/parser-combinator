@@ -67,12 +67,12 @@ function fromStr($str) {
 
 function andThen(Parser $pa, Parser $pb) : Parser {
     $label = sprintf("%s andThen %s", $pa->label, $pb->label);
-    $fn = carrying(function($p1Result) use ($pb) {
-        $f =  carrying(function ($p2Result) use ($p1Result) {
+    $fn = function($p1Result) use ($pb) {
+        $f =  function ($p2Result) use ($p1Result) {
             return returnP([$p1Result, $p2Result]);
-        });
+        };
         return bindP($f, $pb);
-    });
+    };
 
     return setLabel(bindP($fn, $pa), $label);
 }
@@ -158,10 +158,12 @@ function lift2($f, $xp, $yp) : Parser {
 
 function sequence(array $parsers) : Parser {
 
-    $fn = carrying(function ($x, $y) {
-        $x[] = $y;
-        return $x;
-    });
+    $fn = function ($x) {
+        return function($y) use ($x) {
+            $x[] = $y;
+            return $x;
+        };
+    };
     
     return array_reduce($parsers, function($carry, $item) use ($fn) {
         return lift2($fn, $carry, $item);
@@ -232,7 +234,7 @@ function many1(Parser $parser) : Parser {
 }
 
 function optional(Parser $parser) {
-    $some = mapP(carrying(function($x) {return new Some($x);}), $parser);
+    $some = mapP(function($x) {return new Some($x);}, $parser);
     $none = returnP(new None());
 
     return orThen($some, $none);
@@ -241,13 +243,13 @@ function optional(Parser $parser) {
 function keepLeft(Parser $left, Parser $right) {
     $p = andThen($left, $right);
 
-    return mapP(carrying(function($param) {return $param[0];}), $p);
+    return mapP(function($param) {return $param[0];}, $p);
 }
 
 function keepRight(Parser $left, Parser $right) {
     $p = andThen($left, $right);
 
-    return mapP(carrying(function($param) {return $param[1];}), $p);
+    return mapP(function($param) {return $param[1];}, $p);
 }
 
 
@@ -260,9 +262,9 @@ function sepBy1(Parser $p, Parser $sep) {
 
     $p = andThen($p, many($sepThenP));
 
-    $fn  = carrying(function ($x) {
+    $fn  = function ($x) {
         return array_merge([$x[0]],  $x[1]);
-    });
+    };
 
     return mapP($fn, $p);
 }
@@ -272,14 +274,14 @@ function sepBy(Parser $p, Parser $sep) {
 }
 
 
-function bindP(Carrying $fn, Parser $parser) {
+function bindP(Closure $fn, Parser $parser) {
     $fun = function (InputState $input) use ($fn, $parser) {
         $res1 = runOnInput($parser, $input);
         if ($res1 instanceof Failure) {
             return $res1;
         }
 
-        $p2 = $fn->invoke($res1->result);
+        $p2 = $fn($res1->result);
 
         return runOnInput($p2, $res1->remain);
     };
@@ -288,18 +290,18 @@ function bindP(Carrying $fn, Parser $parser) {
 }
 
 // bindP version
-function mapP(Carrying $fn, Parser $parser) {
-    $f = carrying(function($x) use ($fn) {return returnP($fn->invoke($x));});
+function mapP(Closure $fn, Parser $parser) {
+    $f = function($x) use ($fn) {return returnP($fn($x));};
     return bindP($f, $parser);
 }
 
 // bindP version
 function applyP(Parser $fp, Parser $xp) {
-    $fn = carrying(function ($f) use ($xp) {
+    $fn = function ($f) use ($xp) {
        // // $f2 = carrying(function ($x) use ($f) { return returnP($f->invoke($x));});
        // return bindP($f2, $xp);
         return mapP($f, $xp);
-    });
+    };
 
     return bindP($fn, $fp);
 }
@@ -335,12 +337,12 @@ function whitespaceChar() {
 }
 
 function manyChars($cp) {
-    $fn = carrying(function ($x) {return implode('',  $x);});
+    $fn = function ($x) {return implode('',  $x);};
     return mapP($fn, many($cp));
 }
 
 function manyChars1($cp) {
-    $fn = carrying(function ($x) {return implode('',  $x);});
+    $fn = function ($x) {return implode('',  $x);};
     return mapP($fn, many1($cp));
 }
 
@@ -349,9 +351,9 @@ function pstring($str) : Parser {
         return pchar($i);
     }, preg_split('//u', $str, null, PREG_SPLIT_NO_EMPTY));
     
-    $fn = carrying(function ($x) {
+    $fn = function ($x) {
         return implode('', $x);
-    });
+    };
     
     return mapP($fn, sequence($arr));
 }
@@ -363,14 +365,14 @@ function digitChar() {
 
 function pint() {
     $label = 'integer';
-    $resultToInt = carrying(function($param) {
+    $resultToInt = function($param) {
         [$sign, $digits] = $param;
         $i = intval($digits);
         if ($sign instanceof Some) {
             return -$i;
         }
         return $i;
-    });
+    };
     
     $digits = manyChars1(digitChar());
     
@@ -379,14 +381,14 @@ function pint() {
 
 function pfloat() {
     $lable = 'float';
-    $resultTofloat = carrying(function($param) {
+    $resultTofloat = function($param) {
         [[[$sign, $digits1], $point], $digits2] = $param;
         $fl = floatval(sprintf("%s.%s", $digits1, $digits2));
         if ($sign instanceof Some) {
             return -$fl;
         }
         return $fl;
-    });
+    };
     
     $digits = manyChars1(digitChar());
     

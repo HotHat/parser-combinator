@@ -8,7 +8,7 @@ class JsonBool extends JsonValue
 {
 
     public function __toString() {
-       if ($this->val === true) {
+       if ($this->val === 'true') {
            return sprintf("JsonBool('true')");
        }
 
