@@ -158,4 +158,37 @@ class ParserJsonTest extends \PHPUnit\Framework\TestCase
 
     }
 
+
+    public function testArray() {
+        ini_set('xdebug.max_nesting_level', 1800);
+        $r = run($this->parser->jArray(), '[1, 2, "String", true, false, null]');
+        echo $r;
+    }
+
+    public function testArray2()
+    {
+        ini_set('xdebug.max_nesting_level', 1800);
+        $r = run($this->parser->jArray(), '[12, [12]]');
+        echo $r;
+
+    }
+
+    public function testArray3()
+    {
+        ini_set('xdebug.max_nesting_level', 1800);
+        $r = run($this->parser->jArray(), '[12,{"A": 123}]');
+        echo $r;
+
+    }
+
+    public function testObject() {
+        $input = <<< EOF
+{ "name" : "Scott", "isMale" : true, "bday" : {"year":2001, "month":12, "day":25 }, "favouriteColors" : ["blue", "green"] }
+EOF;
+
+
+        $r = run($this->parser->jObject(), $input);
+        echo $r;
+    }
+
 }

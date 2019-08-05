@@ -2,11 +2,16 @@
 
 namespace Wow\Json;
 
+use Closure;
 use IntlChar;
+use Wow\ParserPosition;
 use Wow\Some;
-use Wow\Json\JsonNumber;
+use Wow\Parser;
 
-use function Wow\{manyChars,
+use function Wow\{failure,
+    parser,
+    manyChars,
+    between,
     manyChars1,
     optional,
     pchar,
@@ -14,16 +19,25 @@ use function Wow\{manyChars,
     keepRight,
     orThen,
     pstring,
+    runOnInput,
     satisfy,
+    sepBy1,
     setLabel,
     mapP,
     anyOf,
     keepLeft,
     andThen,
-    spaces1};
+    spaces1,
+    spaces};
 
 class JsonParser
 {
+    private $jValue;
+    public function __construct() {
+
+        $this->jValue = parser(function($input) { echo 'Error Happened!', PHP_EOL, die();}, 'unknown');
+        $this->jValueInit();
+    }
 
     public function returnObject($obj) {
         return function($param) use ($obj) {
@@ -83,14 +97,20 @@ class JsonParser
 
     }
 
-    public function jString() {
+    public function quotedString() {
         $quote = setLabel(pchar('"'), 'quote');
         $jchar = orThen(orThen($this->jUnescapedChar(), $this->jEscapedChar()), $this->jUnicodeChar());
 
         $parser = keepLeft(keepRight($quote, manyChars($jchar)), $quote);
+
+        return $parser;
+    }
+
+    public function jString() {
+        $quoteString = $this->quotedString();
         $fun = function($str) {return new JsonString($str);};
 
-        return setLabel(mapP($fun, $parser), "quoted string");
+        return setLabel(mapP($fun, $quoteString), "quoted string");
     }
 
     public function jNumber() {
@@ -155,6 +175,77 @@ class JsonParser
 
     public function jNumber_() {
         return keepLeft($this->jNumber(), spaces1());
+    }
+
+    public function jArray() {
+        $left = keepLeft(pchar('['), spaces());
+        $right = keepLeft(pchar(']'), spaces());
+        $comma = keepLeft(pchar(','), spaces());
+
+        $jValue = $this->parseRef();
+        $value = keepLeft($jValue, spaces());
+
+        $values = sepBy1($value, $comma);
+
+        $bt = between($left, $values, $right);
+        $fn = function ($param) {
+            return new JsonArray($param);
+        };
+
+        return setLabel(mapP($fn, $bt), 'array');
+    }
+
+    private function forwardRef($input) {
+        return runOnInput($this->jValue, $input);
+    }
+
+    private function parseRef() {
+        return parser(Closure::fromCallable([$this, 'forwardRef']), 'unknown');
+    }
+
+    public function jObject() {
+        $left = keepLeft(pchar('{'), spaces());
+        $right = keepLeft(pchar('}'), spaces());
+        $colon = keepLeft(pchar(':'), spaces());
+        $comma = keepLeft(pchar(','), spaces());
+        $key = keepLeft($this->quotedString(), spaces());
+
+        $jValue = $this->parseRef();
+        $value = keepLeft($jValue, spaces());
+        $keyValue = andThen(keepLeft($key, $colon), $value);
+        $keyValues = sepBy1($keyValue, $comma);
+
+
+        $bt = between($left, $keyValues, $right);
+        $fn = function ($param) {
+            $result = [];
+            foreach ($param as $item) {
+                $result[$item[0]] = $item[1];
+            }
+
+            return new JsonObject($result);
+        };
+
+        return setLabel(mapP($fn, $bt), 'object');
+
+    }
+
+    public function jValueInit() {
+        $null = $this->jNull();
+        $bool = $this->jBool();
+        $number = $this->JNumber();
+        $string = $this->jString();
+        $array = $this->jArray();
+        $object = $this->jObject();
+
+        $this->jValue =choice([
+            $null,
+            $bool,
+            $number,
+            $string,
+            $array,
+            $object
+        ]);
     }
 
 

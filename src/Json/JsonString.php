@@ -9,6 +9,6 @@ class JsonString extends JsonValue
 
     public function __toString()
     {
-        return sprintf('JsonString(%s)', $this->val);
+        return sprintf('JsonString("%s")', $this->val);
     }
 }
