@@ -1,5 +1,5 @@
 {
-    "name": "lyh/parser-combinator",
+    "name": "HotHat/parser-combinator",
     "type": "library",
     "description": "A PHP version of parser combinator",
     "license": "MIT",
